@@ -1,0 +1,5 @@
+﻿Metric,Score
+Accuracy,0.8922413793103449
+Precision(real=1),0.9072164948453608
+Recall(real=1),0.8461538461538461
+F1-score(real=1),0.8756218905472637

@@ -1,0 +1,2 @@
+﻿platform,review_count,mean_trust_score,median_trust_score,low_ratio,ambiguous_ratio,high_ratio,pred_real_ratio
+naver,4082,6.7887,7.1,0.1908,0.1267,0.6825,0.5674

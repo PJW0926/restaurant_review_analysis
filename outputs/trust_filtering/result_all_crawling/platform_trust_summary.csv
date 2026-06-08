@@ -1,0 +1,3 @@
+﻿platform,review_count,mean_trust_score,median_trust_score,low_ratio,ambiguous_ratio,high_ratio,pred_real_ratio
+kakao,2706,4.1321,4.2,0.3045,0.1478,0.5477,0.4357
+naver,4082,6.7887,7.1,0.1908,0.1267,0.6825,0.5674
