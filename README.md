@@ -1,4 +1,4 @@
-# 신뢰 기반 음식점 리뷰 분석(restaurant_review_analysis)
+# 신뢰 기반 음식점 리뷰 분석
 
 ## 1. 프로젝트 개요
 
@@ -21,31 +21,32 @@
 
 분석 데이터는 네이버 지도와 카카오맵에서 수집한 음식점 리뷰로 구성되어 있다.
 
-- 분석 지역: 서울 성수, 마포
-- 음식점 유형: 한식 음식점
-- 음식점 수: 20개
-- 수집 기간: 2025-01-01 ~ 2026-05-09
-- 전체 리뷰 수: 약 6,700건
-  - 네이버 지도: 약 4,175건
-  - 카카오맵: 약 2,526건
+* 분석 지역: 서울 성수, 마포
+* 음식점 유형: 한식 음식점
+* 음식점 수: 20개
+* 수집 기간: 2025-01-01 ~ 2026-05-09
+* 전체 리뷰 수: 약 6,700건
+
+  * 네이버 지도: 약 4,175건
+  * 카카오맵: 약 2,526건
 
 주요 변수는 다음과 같다.
 
-| 변수명 | 설명 |
-|---|---|
-| `platform` | 리뷰 플랫폼 |
-| `store_name` | 음식점명 |
-| `account_id` | 리뷰 작성자 식별값 |
-| `account_review_count` | 작성자의 전체 리뷰 수 |
-| `visit_date` | 방문일 또는 리뷰 기준 날짜 |
-| `verification_method` | 방문 인증 방식 |
-| `review_text` | 리뷰 본문 |
-| `review_length` | 리뷰 길이 |
-| `has_photo` | 사진 첨부 여부 |
-| `visit_count` | 네이버 방문 횟수 |
-| `rating` | 카카오 실제 별점 |
-| `account_avg_rating` | 카카오 작성자 평균 별점 |
-| `reviewer_level` | 카카오 리뷰어 등급 |
+| 변수명                    | 설명              |
+| ---------------------- | --------------- |
+| `platform`             | 리뷰 플랫폼          |
+| `store_name`           | 음식점명            |
+| `account_id`           | 리뷰 작성자 식별값      |
+| `account_review_count` | 작성자의 전체 리뷰 수    |
+| `visit_date`           | 방문일 또는 리뷰 기준 날짜 |
+| `verification_method`  | 방문 인증 방식        |
+| `review_text`          | 리뷰 본문           |
+| `review_length`        | 리뷰 길이           |
+| `has_photo`            | 사진 첨부 여부        |
+| `visit_count`          | 네이버 방문 횟수       |
+| `rating`               | 카카오 실제 별점       |
+| `account_avg_rating`   | 카카오 작성자 평균 별점   |
+| `reviewer_level`       | 카카오 리뷰어 등급      |
 
 ## 4. 데이터 공개 범위 및 익명화
 
@@ -55,3 +56,122 @@
 
 ```text
 원본 계정명 또는 계정 ID → reviewer_000001, reviewer_000002, ...
+```
+
+동일한 작성자는 동일한 익명 ID를 갖도록 처리하여, 계정별 리뷰 수나 반복 작성 여부와 같은 분석 구조는 유지하였다. 다만 실제 계정명, 프로필 URL, 계정 URL, 프로필 이미지 등 개인을 식별할 수 있는 정보는 제거하였다.
+
+## 5. 분석 방법
+
+본 프로젝트의 분석 파이프라인은 다음 네 단계로 구성된다.
+
+### 5.1 리뷰 신뢰도 필터링
+
+리뷰별 trust score를 계산하여 고신뢰 리뷰와 저신뢰 리뷰를 구분하였다. trust score는 다음과 같은 feature를 기반으로 산출하였다.
+
+* 리뷰 길이
+* 일반적 칭찬 표현
+* 메뉴명 포함 여부
+* 숫자 표현 포함 여부
+* 경험 표현 포함 여부
+* 재방문 표현 포함 여부
+* 구체적 부정 표현 포함 여부
+* 사진 첨부 여부
+* 방문 인증 여부
+* 계정 리뷰 수
+* 이벤트 또는 광고성 표현 포함 여부
+
+최종적으로 trust score가 기준값 미만인 리뷰는 저신뢰 리뷰로 분류하였다.
+
+### 5.2 수동 라벨링 기반 성능 평가
+
+수동 라벨링 데이터를 활용하여 신뢰도 필터링 모델의 성능을 평가하였다. 최종 trust score 모델은 수동 라벨 기준으로 약 0.81 수준의 정확도와 F1-score를 보였다.
+
+주요 성능은 다음과 같다.
+
+| 지표                                   |       값 |
+| ------------------------------------ | ------: |
+| Accuracy                             | 약 0.812 |
+| F1-score for low-trust/fake reviews  | 약 0.814 |
+| F1-score for high-trust/real reviews | 약 0.811 |
+| Test Accuracy                        | 약 0.820 |
+
+### 5.3 감성분석
+
+고신뢰 리뷰만을 대상으로 감성분석을 수행하였다. 음식점 리뷰 도메인에 맞게 감성 사전을 보완하였으며, 맛, 양, 가격, 서비스, 웨이팅, 재방문 의도 등 음식점 평가에 중요한 표현을 반영하였다.
+
+### 5.4 감성 별점 정규화
+
+네이버 지도 리뷰에는 실제 별점이 없기 때문에, 텍스트 감성 점수를 1~5점 척도의 감성 별점으로 변환하였다. 카카오맵 리뷰는 실제 별점이 존재하므로, 카카오 실제 별점과 감성 점수를 비교하여 정규화 기준을 조정하였다.
+
+## 6. 저장소 구조
+
+```text
+restaurant_review_analysis/
+│
+├─ README.md
+├─ requirements.txt
+├─ .gitignore
+│
+├─ code/
+│   ├─ crawling/
+│   ├─ trust_filtering/
+│   ├─ sentiment_analysis/
+│   └─ star_normalization/
+│
+├─ data_anonymized/
+│
+└─ outputs/
+    ├─ figures/
+    └─ tables/
+```
+
+## 7. 실행 방법
+
+### 7.1 패키지 설치
+
+```bash
+pip install -r requirements.txt
+```
+
+### 7.2 리뷰 신뢰도 필터링 실행
+
+```bash
+python code/trust_filtering/label_analysis_final.py
+```
+
+### 7.3 감성분석 실행
+
+```bash
+python code/sentiment_analysis/sentiment_analysis_final.py
+```
+
+### 7.4 감성 별점 정규화 실행
+
+```bash
+python code/star_normalization/star_normalization.py
+```
+
+실제 파일명은 최종 제출 코드 파일명에 따라 달라질 수 있다.
+
+## 8. 주요 산출 파일
+
+주요 산출 파일은 다음과 같다.
+
+* `final_high_trust_reviews.csv`
+* `final_high_trust_reviews_category_sentiment.csv`
+* `final_high_trust_reviews_with_sentiment_star.csv`
+* `platform_category_sentiment.csv`
+* `store_summary.csv`
+
+## 9. 재현성 관련 주의사항
+
+본 프로젝트는 로컬 Python 환경에서 개발되었다. 크롤링 코드는 네이버 지도와 카카오맵의 웹페이지 구조 변화에 따라 동일하게 실행되지 않을 수 있다. 따라서 본 저장소는 크롤링 자체의 완전한 재현보다, 수집된 리뷰 데이터를 활용한 전처리, 신뢰도 필터링, 감성분석, 별점 정규화 과정의 재현에 초점을 둔다.
+
+또한 공개 저장소에는 원본 리뷰 데이터 전체를 포함하지 않는다. 원본 데이터에 포함된 계정명, 계정 URL, 프로필 정보 등은 익명화 또는 제거하였다.
+
+## 10. 팀 정보
+
+* 팀명: 데마초
+* 과목명: 데이터마이닝실습 (DSC 3009)
+* 소속: 성균관대학교 데이터사이언스융합전공
+* 제출일: 2026-06-21
