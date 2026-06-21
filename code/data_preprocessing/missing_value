@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 
 BASE_DIR = Path(__file__).resolve().parent
 
-# 여기에 네 파일명 넣기
 INPUT_FILE = BASE_DIR / "all_크롤링_익명화.csv"
 
 OUTPUT_OVERALL = BASE_DIR / "missing_summary_overall.csv"
